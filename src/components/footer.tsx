@@ -3,10 +3,7 @@ import { siteConfig } from "@/lib/siteConfig";
 
 export const Footer = () => {
   return (
-    <div className="absolute bottom-0 w-screen flex flex-row items-center justify-between px-2 py-2">
-      <div>
-        <p className="">accelerate with b2</p>
-      </div>
+    <div className="absolute bottom-0 z-10 w-screen flex flex-row items-center justify-end px-2 py-2">
       <div className="flex flex-row space-x-2">
         <a
           href={siteConfig.homepage}

@@ -1,19 +1,45 @@
 import { cn } from "@/lib/utils";
 import BridgeForm from "./bridge-form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Bridge({ className }: { className?: string }) {
   return (
-    <div
+    <Tabs
+      defaultValue="account"
       className={cn(
-        "w-screen lg:max-w-lg p-6 bg-brand-50 rounded-lg shadow-lg dark:bg-gray-950",
+        "w-screen pointer-events-auto lg:max-w-lg bg-transparent text-brand-950 rounded-lg shadow-lg dark:text-bg-brand-50 dark:bg-brand-950",
         className,
       )}
     >
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">the bridge to bit2</h1>
-        <p className="text-gray-500 dark:text-gray-400"></p>
-        <BridgeForm />
-      </div>
-    </div>
+      <TabsList className="w-full" defaultValue={"deposit"}>
+        <TabsTrigger className="w-full" value="deposit">
+          Deposit
+        </TabsTrigger>
+        <TabsTrigger className="w-full" value="withdraw">
+          Withdraw
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="deposit">
+        <Card>
+          <CardContent>
+            <BridgeForm />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="withdraw">
+        <Card>
+          <CardContent>
+            <span>WIP🚧</span>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 }

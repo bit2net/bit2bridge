@@ -1,8 +1,6 @@
 "use client";
+
 import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Select,
   SelectTrigger,
@@ -13,43 +11,89 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useAccount, useWriteContract } from "wagmi";
+import { useAccount, useWriteContract, useBalance } from "wagmi";
 import { zapAbi as abi } from "@/lib/abi/zap";
-import { zapperAddress } from "@/lib/contracts";
+import { wbtcAddress, zapperAddress } from "@/lib/contracts";
 import { useToast } from "@/components/ui/use-toast";
-import { parseEther } from "viem";
-
-// Zod schema definition
-const schema = z.object({
-  fromToken: z.string(),
-  amount: z.coerce
-    .number()
-    .positive({ message: "Amount must be a positive number" })
-    .min(0, { message: "Minimum amount is 0" }),
-});
-
-type BridgeFormData = z.infer<typeof schema>;
+import { useGetAllowance } from "@/hooks/use-get-allowance";
+import { erc20Abi, formatEther, parseEther } from "viem";
+import { useTokenBalance } from "@/hooks/use-token-balance";
+import { useBridgeStore } from "@/stores/use-bridge-store";
 
 const BridgeForm = () => {
   const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<BridgeFormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      fromToken: "eth",
-      amount: 0,
-    },
-  });
+    fromToken,
+    amount,
+    setFromToken,
+    setAmount,
+    setIsApproving,
+    setIsMainnetBridging,
+    setIsSepolitaBit2Bridging,
+  } = useBridgeStore();
+
   const { writeContract } = useWriteContract();
   const { toast } = useToast();
   const { address } = useAccount();
 
-  const onSubmit = (data: BridgeFormData) => {
-    console.log(data);
-    const { fromToken, amount } = data;
+  const { data: wbtcApprovalAmount, refetch: refetchWbtcApprovalAmount } =
+    useGetAllowance({
+      token: wbtcAddress,
+      owner: address,
+      spender: zapperAddress,
+      chainId: 1,
+    });
+
+  const { data: wbtcBalance } = useTokenBalance({
+    token: wbtcAddress,
+    owner: address,
+    chainId: 1,
+  });
+
+  const { data: ethBalance } = useBalance({
+    address,
+    chainId: 1,
+  });
+
+  const maxAmount =
+    fromToken === "wbtc"
+      ? wbtcBalance
+        ? parseFloat(formatEther(wbtcBalance))
+        : 0
+      : ethBalance
+        ? parseFloat(formatEther(ethBalance.value))
+        : 0;
+
+  const handleApproval = async () => {
+    if (!address) {
+      toast({
+        variant: "destructive",
+        description: "Please connect your wallet to continue.",
+      });
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      writeContract({
+        abi: erc20Abi,
+        address: wbtcAddress,
+        functionName: "approve",
+        args: [zapperAddress, parseEther(amount)],
+      });
+      toast({ description: "Approval successful!" });
+      await refetchWbtcApprovalAmount();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: `Approval failed: ${error?.message ?? "Unknown error"}`,
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     if (!address) {
       toast({
@@ -60,40 +104,66 @@ const BridgeForm = () => {
     }
 
     if (fromToken === "wbtc") {
-      toast({
-        variant: "destructive",
-        description: "WBTC is not supported yet. Try using ETH instead.",
-      });
-      return;
+      let approvalAmount = wbtcApprovalAmount;
+      if (!approvalAmount) {
+        const { data } = await refetchWbtcApprovalAmount();
+        approvalAmount = data;
+        if (!approvalAmount) {
+          await handleApproval();
+        }
+      }
+
+      try {
+        writeContract({
+          abi,
+          address: zapperAddress,
+          functionName: "zapWBTC",
+          args: [address, parseEther(amount)],
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description:
+            "Bridge transaction failed:" + error?.message ?? "Unknown error",
+        });
+      } finally {
+        setIsMainnetBridging(false);
+        return;
+      }
     }
 
-    writeContract({
-      abi,
-      address: zapperAddress,
-      functionName: "zapETH",
-      value: parseEther(amount.toString()),
-      args: [address],
-    });
+    try {
+      writeContract({
+        abi,
+        address: zapperAddress,
+        functionName: "zapETH",
+        value: parseEther(amount),
+        args: [address],
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: `Bridge transaction failed: ${error?.message ?? "Unknown Error"}`,
+      });
+    } finally {
+      setIsMainnetBridging(false);
+    }
   };
 
-  const amount = watch("amount"); // Watch the amount input to update the UI dynamically
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 pointer-events-auto">
+      {/* Form fields remain largely the same */}
       <div className="space-y-2">
-        <Label htmlFor="from-token">From</Label>
-        <Select defaultValue={"eth"} {...register("fromToken")}>
+        <Label htmlFor="from-token">Token</Label>
+        <Select value={fromToken} onValueChange={setFromToken}>
           <SelectTrigger className="w-full">
-            <SelectValue defaultValue={"eth"} placeholder="Select token" />
+            <SelectValue placeholder="Select token" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="eth">Ethereum (ETH)</SelectItem>
             <SelectItem value="wbtc">Wrapped Bitcoin (WBTC)</SelectItem>
           </SelectContent>
         </Select>
-        {errors.fromToken && (
-          <p className="text-red-500">{errors.fromToken.message}</p>
-        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="amount">Amount</Label>
@@ -102,20 +172,27 @@ const BridgeForm = () => {
           type="number"
           step="any"
           min={0}
+          max={maxAmount}
           placeholder="Enter amount"
-          {...register("amount")}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
         />
-        {errors.amount && (
-          <p className="text-red-500">{errors.amount.message}</p>
-        )}
       </div>
       <div className="flex justify-between">
         <div className="text-gray-500 dark:text-gray-400">You will receive</div>
         <div className="font-bold">{`${amount || "0.00"} WWBTC`}</div>
       </div>
-      <Button className="w-full" type="submit">
-        Bridge
-      </Button>
+      {fromToken === "wbtc" &&
+      wbtcApprovalAmount !== undefined &&
+      wbtcApprovalAmount < parseEther(amount || "0") ? (
+        <Button className="w-full" type="button" onClick={handleApproval}>
+          Approve
+        </Button>
+      ) : (
+        <Button className="w-full" type="submit">
+          Bridge
+        </Button>
+      )}
     </form>
   );
 };

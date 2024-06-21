@@ -85,7 +85,7 @@ const BridgeForm = () => {
     } catch (error) {
       toast({
         variant: "destructive",
-        description: `Approval failed: ${error?.message ?? "Unknown error"}`,
+        description: `Approval failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     } finally {
       setIsApproving(false);
@@ -121,10 +121,11 @@ const BridgeForm = () => {
           args: [address, parseEther(amount)],
         });
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         toast({
           variant: "destructive",
-          description:
-            "Bridge transaction failed:" + error?.message ?? "Unknown error",
+          description: `Bridge transaction failed: ${message}`,
         });
       } finally {
         setIsMainnetBridging(false);
@@ -141,9 +142,10 @@ const BridgeForm = () => {
         args: [address],
       });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       toast({
         variant: "destructive",
-        description: `Bridge transaction failed: ${error?.message ?? "Unknown Error"}`,
+        description: `Bridge transaction failed: ` + message,
       });
     } finally {
       setIsMainnetBridging(false);

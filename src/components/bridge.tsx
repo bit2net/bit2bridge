@@ -8,7 +8,6 @@ import { wwbtcsSepoliaAddress } from "@/lib/contracts";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
-import { Button } from "@/components/ui/button";
 import { useBridgeStore } from "@/stores/use-bridge-store";
 import { ApprovalModal } from "./approval-modal";
 import { MainnetToSepoliaModal } from "./mainnet-to-sepolia-bridge-modal";

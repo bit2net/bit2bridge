@@ -11,19 +11,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useAccount, useWriteContract, useBalance } from "wagmi";
-import { zapAbi as abi } from "@/lib/abi/zap";
 import {
-  wbtcAddress,
-  wwbtcsSepoliaAddress,
-  zapperAddress,
-} from "@/lib/contracts";
+  useAccount,
+  useWriteContract,
+  useBalance,
+  useSwitchChain,
+} from "wagmi";
+import { zapAbi as abi } from "@/lib/abi/zap";
+import { wbtcAddress, zapperAddress } from "@/lib/contracts";
 import { useToast } from "@/components/ui/use-toast";
 import { useGetAllowance } from "@/hooks/use-get-allowance";
 import { erc20Abi, formatEther, parseEther } from "viem";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useBridgeStore } from "@/stores/use-bridge-store";
-import { mainnet, sepolia } from "viem/chains";
+import { mainnet } from "viem/chains";
+import { MAX_UINT256 } from "@/lib/constants";
 
 const BridgeForm = () => {
   const {
@@ -33,10 +35,9 @@ const BridgeForm = () => {
     setAmount,
     setIsApproving,
     setIsMainnetBridging,
-    setIsSepolitaBit2Bridging,
   } = useBridgeStore();
 
-  const { writeContract } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const { toast } = useToast();
   const { address } = useAccount();
 
@@ -59,6 +60,8 @@ const BridgeForm = () => {
     chainId: mainnet.id,
   });
 
+  const { switchChain } = useSwitchChain();
+
   const maxAmount =
     fromToken === "wbtc"
       ? wbtcBalance
@@ -79,13 +82,15 @@ const BridgeForm = () => {
 
     setIsApproving(true);
     try {
-      writeContract({
+      const txHash = await writeContractAsync({
         abi: erc20Abi,
         address: wbtcAddress,
         functionName: "approve",
-        args: [zapperAddress, parseEther(amount)],
+        args: [zapperAddress, MAX_UINT256],
+        chainId: mainnet.id,
       });
-      toast({ description: "Approval successful!" });
+
+      toast({ description: "Approval submitted succesfully! " + txHash });
       await refetchWbtcApprovalAmount();
     } catch (error) {
       toast({
@@ -118,12 +123,20 @@ const BridgeForm = () => {
         }
       }
 
+      setIsMainnetBridging(true);
+
       try {
-        writeContract({
+        const txHash = await writeContractAsync({
           abi,
           address: zapperAddress,
           functionName: "zapWBTC",
           args: [address, parseEther(amount)],
+          chainId: mainnet.id,
+        });
+
+        toast({
+          description:
+            "Bridge to sepolia transaction submitted successfully! " + txHash,
         });
       } catch (error) {
         const message =
@@ -133,18 +146,23 @@ const BridgeForm = () => {
           description: `Bridge transaction failed: ${message}`,
         });
       } finally {
-        setIsMainnetBridging(false);
         return;
       }
     }
 
     try {
-      writeContract({
+      const txHash = await writeContractAsync({
         abi,
         address: zapperAddress,
         functionName: "zapETH",
         value: parseEther(amount),
         args: [address],
+        chainId: mainnet.id,
+      });
+
+      toast({
+        description:
+          "Bridge to sepolia transaction submitted successfully! " + txHash,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -153,7 +171,7 @@ const BridgeForm = () => {
         description: `Bridge transaction failed: ` + message,
       });
     } finally {
-      setIsMainnetBridging(false);
+      return;
     }
   };
 

@@ -1,3 +1,4 @@
+"use client";
 import { useBridgeStore } from "@/stores/use-bridge-store";
 import {
   AlertDialog,

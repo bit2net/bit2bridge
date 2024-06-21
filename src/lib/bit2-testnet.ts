@@ -18,5 +18,5 @@ export const bit2_testnet = {
       blockCreated: 147340,
     },
   },
-  testnet: true,
+  testnet: false,
 } as const satisfies Chain;

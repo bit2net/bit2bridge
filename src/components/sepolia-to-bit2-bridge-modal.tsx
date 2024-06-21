@@ -16,6 +16,7 @@ import { superbridgeAbi } from "@/lib/abi/superbridgeAbi";
 import { useToast } from "@/components/ui/use-toast";
 import { Icons } from "@/lib/icons";
 import { formatEther } from "viem";
+import { bit2_testnet } from "@/lib/bit2-testnet";
 
 export const SepoliaToBit2BridgeModal = () => {
   const {
@@ -30,10 +31,10 @@ export const SepoliaToBit2BridgeModal = () => {
   const { writeContractAsync } = useWriteContract({
     mutation: {
       onSuccess: (data) => {
-        console.log("onSuccess data", data);
         setIsSepoliaToBit2Bridging(false);
         toast({
-          description: "Bridged successfully",
+          description:
+            "Bridged successfully. It may take 3-5 minutes to reflect in your wallet.",
         });
       },
     },
@@ -53,7 +54,7 @@ export const SepoliaToBit2BridgeModal = () => {
         }
         to = address;
       }
-      console.log("made it to", wwbtcsAmount);
+
       if (!wwbtcsAmount) {
         toast({
           variant: "destructive",
@@ -62,8 +63,6 @@ export const SepoliaToBit2BridgeModal = () => {
         setIsSepoliaToBit2Bridging(false);
         return;
       }
-      console.log("made it to wwbtcs");
-
       switchChain({ chainId: sepolia.id });
 
       const txHash = await writeContractAsync({
@@ -74,7 +73,9 @@ export const SepoliaToBit2BridgeModal = () => {
         chainId: sepolia.id,
       });
 
-      console.log("made it to writeContract");
+      toast({ description: "Switching chain to bit2." });
+
+      switchChain({ chainId: bit2_testnet.id });
     };
 
     if (isSepoliaToBit2Bridging === true) {

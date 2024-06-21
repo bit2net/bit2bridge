@@ -121,6 +121,10 @@ const BridgeForm = () => {
       return;
     }
 
+    switchChain({
+      chainId: mainnet.id,
+    });
+
     if (fromToken === "wbtc") {
       let approvalAmount = wbtcApprovalAmount;
       if (!approvalAmount) {

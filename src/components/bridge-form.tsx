@@ -13,12 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAccount, useWriteContract, useBalance } from "wagmi";
 import { zapAbi as abi } from "@/lib/abi/zap";
-import { wbtcAddress, zapperAddress } from "@/lib/contracts";
+import {
+  wbtcAddress,
+  wwbtcsSepoliaAddress,
+  zapperAddress,
+} from "@/lib/contracts";
 import { useToast } from "@/components/ui/use-toast";
 import { useGetAllowance } from "@/hooks/use-get-allowance";
 import { erc20Abi, formatEther, parseEther } from "viem";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useBridgeStore } from "@/stores/use-bridge-store";
+import { mainnet, sepolia } from "viem/chains";
 
 const BridgeForm = () => {
   const {
@@ -46,12 +51,12 @@ const BridgeForm = () => {
   const { data: wbtcBalance } = useTokenBalance({
     token: wbtcAddress,
     owner: address,
-    chainId: 1,
+    chainId: mainnet.id,
   });
 
   const { data: ethBalance } = useBalance({
     address,
-    chainId: 1,
+    chainId: mainnet.id,
   });
 
   const maxAmount =

@@ -8,3 +8,6 @@ export const wbtcAddress =
 
 export const superbridgeAddress =
   "0xC0bd6C3a63Cb6cA6ee2C31e0edb5c4E0874a7Cc3" as Address;
+
+export const wwbtcsSepoliaAddress =
+  "0x1B1aA1de252145A6a73A5E73cDa64c34260891Eb" as Address;

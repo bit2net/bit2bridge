@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import {
   Select,
   SelectTrigger,
@@ -46,7 +46,7 @@ const BridgeForm = () => {
       token: wbtcAddress,
       owner: address,
       spender: zapperAddress,
-      chainId: 1,
+      chainId: mainnet.id,
     });
 
   const { data: wbtcBalance } = useTokenBalance({
@@ -62,16 +62,14 @@ const BridgeForm = () => {
 
   const { switchChain } = useSwitchChain();
 
-  const maxAmount =
-    fromToken === "wbtc"
-      ? wbtcBalance
-        ? parseFloat(formatEther(wbtcBalance))
-        : 0
-      : ethBalance
-        ? parseFloat(formatEther(ethBalance.value))
-        : 0;
+  const maxAmount = React.useMemo(() => {
+    if (fromToken === "wbtc") {
+      return wbtcBalance ? parseFloat(formatEther(wbtcBalance)) : 0;
+    }
+    return ethBalance ? parseFloat(formatEther(ethBalance.value)) : 0;
+  }, [fromToken, wbtcBalance, ethBalance]);
 
-  const handleApproval = async () => {
+  const handleApproval = useCallback(async () => {
     if (!address) {
       toast({
         variant: "destructive",
@@ -90,7 +88,7 @@ const BridgeForm = () => {
         chainId: mainnet.id,
       });
 
-      toast({ description: "Approval submitted succesfully! " + txHash });
+      toast({ description: "Approval submitted successfully! " + txHash });
       await refetchWbtcApprovalAmount();
     } catch (error) {
       toast({
@@ -100,96 +98,122 @@ const BridgeForm = () => {
     } finally {
       setIsApproving(false);
     }
-  };
+  }, [
+    address,
+    writeContractAsync,
+    toast,
+    refetchWbtcApprovalAmount,
+    setIsApproving,
+  ]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    if (parseFloat(amount) == 0) {
-      toast({
-        variant: "destructive",
-        description: "Please enter an amount greater than 0.",
-      });
-      return;
-    }
-
-    if (!address) {
-      toast({
-        variant: "destructive",
-        description: "Please connect your wallet to continue.",
-      });
-      return;
-    }
-
-    switchChain({
-      chainId: mainnet.id,
-    });
-
-    if (fromToken === "wbtc") {
-      let approvalAmount = wbtcApprovalAmount;
-      if (!approvalAmount) {
-        const { data } = await refetchWbtcApprovalAmount();
-        approvalAmount = data;
-        if (!approvalAmount) {
-          await handleApproval();
-        }
+      if (parseFloat(amount) === 0) {
+        toast({
+          variant: "destructive",
+          description: "Please enter an amount greater than 0.",
+        });
+        return;
       }
 
-      setIsMainnetBridging(true);
+      if (!address) {
+        toast({
+          variant: "destructive",
+          description: "Please connect your wallet to continue.",
+        });
+        return;
+      }
+
+      try {
+        await switchChain({
+          chainId: mainnet.id,
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: `Switch chain failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+        return;
+      }
+
+      if (fromToken === "wbtc") {
+        let approvalAmount = wbtcApprovalAmount;
+        if (!approvalAmount) {
+          const { data } = await refetchWbtcApprovalAmount();
+          approvalAmount = data;
+          if (!approvalAmount) {
+            await handleApproval();
+          }
+        }
+
+        setIsMainnetBridging(true);
+
+        try {
+          const txHash = await writeContractAsync({
+            abi,
+            address: zapperAddress,
+            functionName: "zapWBTC",
+            args: [address, parseEther(amount)],
+            chainId: mainnet.id,
+          });
+
+          toast({
+            description:
+              "Bridge to Sepolia transaction submitted successfully! " + txHash,
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          toast({
+            variant: "destructive",
+            description: `Bridge transaction failed: ${message}`,
+          });
+        } finally {
+          return;
+        }
+      }
 
       try {
         const txHash = await writeContractAsync({
           abi,
           address: zapperAddress,
-          functionName: "zapWBTC",
-          args: [address, parseEther(amount)],
+          functionName: "zapETH",
+          value: parseEther(amount),
+          args: [address],
           chainId: mainnet.id,
         });
 
         toast({
           description:
-            "Bridge to sepolia transaction submitted successfully! " + txHash,
+            "Bridge to Sepolia transaction submitted successfully! " + txHash,
         });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
         toast({
           variant: "destructive",
-          description: `Bridge transaction failed: ${message}`,
+          description: `Bridge transaction failed: ` + message,
         });
-      } finally {
-        return;
       }
-    }
-
-    try {
-      const txHash = await writeContractAsync({
-        abi,
-        address: zapperAddress,
-        functionName: "zapETH",
-        value: parseEther(amount),
-        args: [address],
-        chainId: mainnet.id,
-      });
-
-      toast({
-        description:
-          "Bridge to sepolia transaction submitted successfully! " + txHash,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      toast({
-        variant: "destructive",
-        description: `Bridge transaction failed: ` + message,
-      });
-    } finally {
-      return;
-    }
-  };
+    },
+    [
+      amount,
+      address,
+      switchChain,
+      fromToken,
+      wbtcApprovalAmount,
+      refetchWbtcApprovalAmount,
+      handleApproval,
+      setIsMainnetBridging,
+      writeContractAsync,
+      toast,
+    ],
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pointer-events-auto">
-      {/* Form fields remain largely the same */}
       <div className="space-y-2">
         <Label htmlFor="from-token">Token</Label>
         <Select value={fromToken} onValueChange={setFromToken}>

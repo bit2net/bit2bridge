@@ -105,6 +105,14 @@ const BridgeForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (parseFloat(amount) == 0) {
+      toast({
+        variant: "destructive",
+        description: "Please enter an amount greater than 0.",
+      });
+      return;
+    }
+
     if (!address) {
       toast({
         variant: "destructive",

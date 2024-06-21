@@ -21,7 +21,7 @@ import { zapAbi as abi } from "@/lib/abi/zap";
 import { wbtcAddress, zapperAddress } from "@/lib/contracts";
 import { useToast } from "@/components/ui/use-toast";
 import { useGetAllowance } from "@/hooks/use-get-allowance";
-import { erc20Abi, formatEther, parseEther } from "viem";
+import { erc20Abi, formatUnits, parseEther, parseUnits } from "viem";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useBridgeStore } from "@/stores/use-bridge-store";
 import { mainnet } from "viem/chains";
@@ -64,9 +64,9 @@ const BridgeForm = () => {
 
   const maxAmount = React.useMemo(() => {
     if (fromToken === "wbtc") {
-      return wbtcBalance ? parseFloat(formatEther(wbtcBalance)) : 0;
+      return wbtcBalance ? parseFloat(formatUnits(wbtcBalance, 8)) : 0;
     }
-    return ethBalance ? parseFloat(formatEther(ethBalance.value)) : 0;
+    return ethBalance ? parseFloat(formatUnits(ethBalance.value, 18)) : 0;
   }, [fromToken, wbtcBalance, ethBalance]);
 
   const handleApproval = useCallback(async () => {
@@ -127,7 +127,7 @@ const BridgeForm = () => {
       }
 
       try {
-        await switchChain({
+        switchChain({
           chainId: mainnet.id,
         });
       } catch (error) {
@@ -245,7 +245,7 @@ const BridgeForm = () => {
       </div>
       {fromToken === "wbtc" &&
       wbtcApprovalAmount !== undefined &&
-      wbtcApprovalAmount < parseEther(amount || "0") ? (
+      wbtcApprovalAmount < parseUnits(amount || "0", 8) ? (
         <Button className="w-full" type="button" onClick={handleApproval}>
           Approve
         </Button>

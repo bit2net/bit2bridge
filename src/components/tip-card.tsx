@@ -34,13 +34,14 @@ export function TipCard() {
       <div>
         <h3 className="font-bold">🚧 WIP 🚧</h3>
         <p className="text-sm">
-          Only the flow to bridge from mainnet to sepolia is complete yet. Do
-          not use if you are not a developer. Sepolia to bit2 is coming next. If
-          you have bridged from mainnet to sepolia already, you can use{" "}
+          Only the flow to bridge from mainnet to sepolia is complete yet(ETH).
+          Do not use if you are not a developer. Sepolia to bit2 is coming next.
+          If you have bridged from mainnet to sepolia already, you can use{" "}
           <a
             href="https://bit2-z2t7fxe8ku-b9ac48ffb864bafe.testnets.rollbridge.app/"
             target="_blank"
             rel="noopenner noreferrer"
+            className="text-blue-500 hover:underline pointer-events-auto"
           >
             this link (conduit superbridge)
           </a>{" "}

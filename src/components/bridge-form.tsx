@@ -155,7 +155,7 @@ const BridgeForm = () => {
             abi,
             address: zapperAddress,
             functionName: "zapWBTC",
-            args: [address, parseEther(amount)],
+            args: [address, parseUnits(amount, 8)],
             chainId: mainnet.id,
           });
 

@@ -8,7 +8,7 @@ import { useAccount, useWriteContract } from "wagmi";
 import { hyperc20Abi as abi } from "@/lib/abi/hyperc20";
 import { useToast } from "@/components/ui/use-toast";
 import { parseEther, pad } from "viem";
-import { mainnet } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 import { wwbtcsSepoliaAddress } from "@/lib/contracts";
 
 const WithdrawForm = () => {
@@ -49,7 +49,7 @@ const WithdrawForm = () => {
           address: wwbtcsSepoliaAddress,
           functionName: "transferRemote",
           args: [1, paddedAddress, parseEther(amount)],
-          chainId: mainnet.id,
+          chainId: sepolia.id,
         });
 
         toast({

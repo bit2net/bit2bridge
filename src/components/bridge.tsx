@@ -13,6 +13,7 @@ import { ApprovalModal } from "./approval-modal";
 import { MainnetToSepoliaModal } from "./mainnet-to-sepolia-bridge-modal";
 import { SepoliaToBit2BridgeModal } from "./sepolia-to-bit2-bridge-modal";
 import { useToast } from "./ui/use-toast";
+import WithdrawForm from "./withdraw-form";
 
 export default function Bridge({ className }: { className?: string }) {
   const { address } = useAccount();
@@ -99,7 +100,7 @@ export default function Bridge({ className }: { className?: string }) {
             <Card>
               <CardHeader className="h-6 p-0"></CardHeader>
               <CardContent>
-                <span>WIP🚧</span>
+                <WithdrawForm />
               </CardContent>
             </Card>
           </TabsContent>
